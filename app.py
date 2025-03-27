@@ -16,3 +16,12 @@ df["sentiment"] = df["sentiment"].map(label_mapping)
 
 # Split dataset into train & test
 X_train, X_test, y_train, y_test = train_test_split(df["review"], df["sentiment"], test_size=0.2, random_state=42)
+
+MAX_WORDS = 10000  # Vocabulary size
+MAX_LEN = 100  # Max sequence length
+
+tokenizer = Tokenizer(num_words=MAX_WORDS, oov_token="<OOV>")
+tokenizer.fit_on_texts(X_train)
+
+X_train_seq = pad_sequences(tokenizer.texts_to_sequences(X_train), maxlen=MAX_LEN, padding="post")
+X_test_seq = pad_sequences(tokenizer.texts_to_sequences(X_test), maxlen=MAX_LEN, padding="post")
