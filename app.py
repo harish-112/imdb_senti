@@ -6,10 +6,12 @@ from tensorflow.keras.preprocessing.sequence import pad_sequences
 from tensorflow.keras.models import Sequential
 from tensorflow.keras.layers import Embedding, LSTM, Dense, Dropout
 from sklearn.model_selection import train_test_split
+import joblib
+
 
 # Load dataset (Ensure it has 'text' and 'label' columns)
-df = pd.read_csv("/content/IMDB Dataset.csv", escapechar='\\') 
-
+df = pd.read_csv("IMDB Dataset.csv", escapechar='\\') 
+model = joblib.load('senti_analysis.pkl')
 # Convert labels to numeric (0 = Negative, 1 = Neutral, 2 = Positive)
 label_mapping = {"negative": 0, "neutral": 1, "positive": 2}
 df["sentiment"] = df["sentiment"].map(label_mapping)
@@ -26,17 +28,29 @@ tokenizer.fit_on_texts(X_train)
 X_train_seq = pad_sequences(tokenizer.texts_to_sequences(X_train), maxlen=MAX_LEN, padding="post")
 X_test_seq = pad_sequences(tokenizer.texts_to_sequences(X_test), maxlen=MAX_LEN, padding="post")
 
-model = Sequential([
-    Embedding(MAX_WORDS, 128, input_length=MAX_LEN),
-    LSTM(64, return_sequences=True),
-    Dropout(0.3),
-    LSTM(32),
-    Dense(32, activation="relu"),
-    Dense(3, activation="softmax")  # 3 classes: Negative, Neutral, Positive
-])
 
-model.compile(loss="sparse_categorical_crossentropy", optimizer="adam", metrics=["accuracy"])
-model.summary()
+import requests
+from bs4 import BeautifulSoup
 
-# Train model
-model.fit(X_train_seq, y_train, epochs=5, batch_size=32, validation_data=(X_test_seq, y_test))
+def fetch_rotten_tomatoes_reviews(movie_url, limit=10):
+    headers = {"User-Agent": "Mozilla/5.0"}
+    response = requests.get(movie_url, headers=headers)
+    soup = BeautifulSoup(response.text, "html.parser")
+
+    reviews = []
+    review_elements = soup.find_all("p", class_="review-text") # Adjust class as needed
+
+    for review in review_elements[:limit]:
+        reviews.append(review.get_text(strip=True))
+
+    return reviews
+
+# Example Rotten Tomatoes URL (Replace with actual movie URL)
+movie_url = "https://www.rottentomatoes.com/m/london_fields/reviews"
+reviews = fetch_rotten_tomatoes_reviews(movie_url, limit=10)
+reviews = [review for review in reviews if review]
+print(reviews)  # Check the scraped reviews
+
+
+
+
